@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>English Learning - Organization Skills</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+    <style>
+        :root { --primary: #58cc02; --secondary: #1cb0f6; --text: #4b4b4b; --bg: #f7f7f7; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); display: flex; flex-direction: column; align-items: center; min-height: 100vh; margin: 0; }
+        #app { width: 90%; max-width: 500px; padding: 20px; text-align: center; }
+        .card-ui { background: white; border-radius: 20px; padding: 25px; border: 2px solid #e5e5e5; box-shadow: 0 8px 0 #e5e5e5; }
+        .hidden { display: none !important; }
+        
+        /* Botones Estilo Duolingo */
+        button { background: var(--primary); color: white; border: none; padding: 15px 25px; border-radius: 12px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 0 #46a302; font-size: 1.1em; transition: 0.1s; margin: 10px; }
+        button:active { transform: translateY(4px); box-shadow: none; }
+        input { padding: 12px; border-radius: 10px; border: 2px solid #ccc; width: 80%; margin-bottom: 10px; font-size: 1em; }
+
+        /* Flashcard Animada */
+        .scene { width: 280px; height: 350px; margin: 20px auto; perspective: 600px; }
+        .flashcard { width: 100%; height: 100%; position: relative; transition: transform 0.6s; transform-style: preserve-3d; cursor: pointer; }
+        .flashcard.is-flipped { transform: rotateY(180deg); }
+        .face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 20px; border: 3px solid #e5e5e5; padding: 15px; box-sizing: border-box; background: white; }
+        .back { transform: rotateY(180deg); background: var(--secondary); color: white; }
+        .img-box { width: 150px; height: 150px; background: #eee; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 80px; margin-bottom: 20px; }
+        
+        .option-btn { background: white; color: var(--text); border: 2px solid #e5e5e5; box-shadow: 0 4px 0 #e5e5e5; width: 100%; }
+        .option-btn:hover { background: #f0f0f0; }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <div id="screen-login" class="card-ui">
+        <h1>¡Hola! 👋</h1>
+        <p>Aprende inglés de forma divertida.</p>
+        <input type="text" id="username" placeholder="Escribe tu nombre aquí...">
+        <br>
+        <button onclick="iniciar()">EMPEZAR JUEGO</button>
+    </div>
+
+    <div id="screen-flash" class="hidden">
+        <h3 id="progress">1 / 41</h3>
+        <div class="scene">
+            <div class="flashcard" id="card" onclick="voltear()">
+                <div class="face front">
+                    <div class="img-box" id="card-icon">📚</div>
+                    <h2 id="card-en">Word</h2>
+                </div>
+                <div class="face back">
+                    <h2 id="card-es">Palabra</h2>
+                </div>
+            </div>
+        </div>
+        <p>Haz click en la carta para ver la traducción</p>
+        <button id="btn-aprendido" class="hidden" onclick="irAlQuiz()">¡APRENDIDO!</button>
+    </div>
+
+    <div id="screen-quiz" class="hidden">
+        <h2 id="quiz-title">Práctica</h2>
+        <div id="quiz-area" class="card-ui">
+            </div>
+    </div>
+
+    <div id="screen-over" class="hidden card-ui">
+        <h1>🎉 ¡GAME OVER! 🎉</h1>
+        <h3>¡Lo lograste, <span id="player-name"></span>!</h3>
+        <hr>
+        <h4>Récord de Jugadores:</h4>
+        <div id="leaderboard" style="text-align: left;"></div>
+        <button onclick="location.reload()">VOLVER A JUGAR</button>
+    </div>
+</div>
+
+<script>
+    const data = [
+        { en: "How to get organized", es: "Cómo organizarse", icon: "📅" },
+        { en: "15 minutes early", es: "15 minutos temprano", icon: "⏰" },
+        { en: "Rushing to be on time", es: "Apurado para llegar a tiempo", icon: "🏃" },
+        { en: "Very stressful", es: "Muy estresante", icon: "😫" },
+        { en: "If one little thing goes wrong", es: "Si una pequeña cosa sale mal", icon: "⚠️" },
+        { en: "Your efforts are futile", es: "Tus esfuerzos son inútiles", icon: "🚫" },
+        { en: "Give yourself a break", es: "Date un respiro", icon: "🧘" },
+        { en: "A 15-minute head start", es: "Una ventaja de 15 minutos", icon: "⏳" },
+        { en: "It’s easier to make time than to get back lost time", es: "Es más fácil hacerse tiempo que recuperar el tiempo perdido", icon: "⌛" },
+        { en: "Prepare your things the night before", es: "Prepara tus cosas la noche anterior", icon: "🌙" },
+        { en: "Get your clothes ready", es: "Prepara tu ropa", icon: "👕" },
+        { en: "Pack your backpack", es: "Empaca tu mochila", icon: "🎒" },
+        { en: "Set out the box of cereal", es: "Saca la caja de cereal", icon: "🥣" },
+        { en: "Set the breakfast table", es: "Pon la mesa del desayuno", icon: "🍽️" },
+        { en: "Your mornings will go very smoothly", es: "Tus mañanas transcurrirán sin problemas", icon: "✨" },
+        { en: "You’ll have a more positive start", es: "Tendrás un comienzo más positivo", icon: "☀️" },
+        { en: "Use a day planner", es: "Usa una agenda", icon: "📔" },
+        { en: "Write down things you have to do", es: "Anota las cosas que tienes que hacer", icon: "📝" },
+        { en: "Use alerts to help you remember things", es: "Usa alertas para ayudarte a recordar", icon: "🔔" },
+        { en: "Flag your most important priorities", es: "Marca tus prioridades más importantes", icon: "🚩" },
+        { en: "You have a test due on a certain day", es: "Tienes un examen en un día determinado", icon: "✍️" },
+        { en: "Make a space in your room", es: "Crea un espacio en tu habitación", icon: "🏠" },
+        { en: "An unused corner of the living room", es: "Un rincón libre de la sala", icon: "🛋️" },
+        { en: "Put a desk light there", es: "Pon una lámpara de escritorio allí", icon: "💡" },
+        { en: "Make it your place to do your homework", es: "Hazlo tu lugar para hacer la tarea", icon: "💻" },
+        { en: "You will train yourself to concentrate", icon: "🧠", es: "Te entrenarás para concentrarte" },
+        { en: "When you are sitting there", es: "Cuando estés sentado allí", icon: "🪑" },
+        { en: "Your family will leave you alone to study", es: "Tu familia te dejará solo para estudiar", icon: "🔕" },
+        { en: "Wake up at 6 am", es: "Despiértate a las 6 am", icon: "🌅" },
+        { en: "Get dressed", es: "Vístete", icon: "👟" },
+        { en: "Take a shower", es: "Tómate una ducha", icon: "🚿" },
+        { en: "Have breakfast", es: "Desayuna", icon: "🍳" },
+        { en: "Have lunch", es: "Almuerza", icon: "🥪" },
+        { en: "Have dinner", es: "Cena", icon: "🍲" },
+        { en: "Brush my teeth", es: "Lávate los dientes", icon: "🪥" },
+        { en: "Go to school", es: "Ve a la escuela", icon: "🏫" },
+        { en: "Get to school", es: "Llega a la escuela", icon: "🚌" },
+        { en: "Watch TV", es: "Mira televisión", icon: "📺" },
+        { en: "Go to bed at 10 pm", es: "Ve a la cama a las 10 pm", icon: "😴" },
+        { en: "Do my homework", es: "Haz mi tarea", icon: "✏️" },
+        { en: "Do exercise", es: "Haz ejercicio", icon: "💪" }
+    ];
+
+    let index = 0;
+    let nombre = "";
+    const card = document.getElementById('card');
+
+    function hablar(texto, idioma = 'en-US') {
+        const p = new SpeechSynthesisUtterance(texto);
+        p.lang = idioma;
+        p.rate = 0.9;
+        window.speechSynthesis.speak(p);
+    }
+
+    function iniciar() {
+        nombre = document.getElementById('username').value.trim();
+        if(!nombre) { alert("¡Dime tu nombre!"); return; }
+        
+        // Guardar en registro
+        let historico = JSON.parse(localStorage.getItem('jugadores') || "[]");
+        historico.push(nombre);
+        localStorage.setItem('jugadores', JSON.stringify(historico));
+
+        document.getElementById('screen-login').classList.add('hidden');
+        document.getElementById('screen-flash').classList.remove('hidden');
+        mostrarCard();
+    }
+
+    function mostrarCard() {
+        const item = data[index];
+        document.getElementById('progress').innerText = `${index + 1} / ${data.length}`;
+        document.getElementById('card-en').innerText = item.en;
+        document.getElementById('card-es').innerText = item.es;
+        document.getElementById('card-icon').innerText = item.icon;
+        card.classList.remove('is-flipped');
+        document.getElementById('btn-aprendido').classList.add('hidden');
+        hablar(item.en);
+    }
+
+    function voltear() {
+        card.classList.toggle('is-flipped');
+        if(card.classList.contains('is-flipped')) {
+            hablar(data[index].es, 'es-MX');
+            document.getElementById('btn-aprendido').classList.remove('hidden');
+        } else {
+            hablar(data[index].en);
+        }
+    }
+
+    function irAlQuiz() {
+        document.getElementById('screen-flash').classList.add('hidden');
+        document.getElementById('screen-quiz').classList.remove('hidden');
+        
+        const modo = Math.floor(Math.random() * 4);
+        const area = document.getElementById('quiz-area');
+        const item = data[index];
+        area.innerHTML = "";
+
+        if(modo === 0) { // Listening
+            document.getElementById('quiz-title').innerText = "🎧 Listen & Choose";
+            area.innerHTML = `<button onclick="reproducir()">🔊 Play Sound</button>`;
+            window.reproducir = () => hablar(item.en);
+            generarOpciones(item.en, false);
+            hablar(item.en);
+        } else if(modo === 1) { // Writing
+            document.getElementById('quiz-title').innerText = "✍️ Write in English";
+            area.innerHTML = `<h3>"${item.es}"</h3>
+                <input type="text" id="ans" placeholder="Type here...">
+                <button onclick="validarEscritura()">CHECK</button>`;
+        } else if(modo === 2) { // Speaking
+            document.getElementById('quiz-title').innerText = "🗣️ Speaking Mode";
+            area.innerHTML = `<h2 style="color:var(--secondary)">${item.en}</h2>
+                <button style="background:orange" onclick="alert('Micrófono activado...')">🎤 SPEAK NOW</button>
+                <button onclick="feedback(true)">I'M DONE</button>`;
+        } else { // Reading
+            document.getElementById('quiz-title').innerText = "📖 Reading Time";
+            area.innerHTML = `<h2 style="color:var(--primary)">${item.en}</h2>`;
+            generarOpciones(item.es, true);
+        }
+    }
+
+    function generarOpciones(correcta, esEspanol) {
+        let opts = [correcta];
+        while(opts.length < 3) {
+            let r = data[Math.floor(Math.random()*data.length)];
+            let pick = esEspanol ? r.es : r.en;
+            if(!opts.includes(pick)) opts.push(pick);
+        }
+        opts.sort(() => Math.random() - 0.5);
+        opts.forEach(o => {
+            let b = document.createElement('button');
+            b.className = "option-btn";
+            b.innerText = o;
+            b.onclick = () => feedback(o === correcta);
+            document.getElementById('quiz-area').appendChild(b);
+        });
+    }
+
+    function validarEscritura() {
+        let user = document.getElementById('ans').value.toLowerCase().trim().replace(/[^\w\s]/gi, '');
+        let real = data[index].en.toLowerCase().trim().replace(/[^\w\s]/gi, '');
+        feedback(user === real);
+    }
+
+    function feedback(esCorrecto) {
+        if(esCorrecto) {
+            confetti({ particleCount: 150 });
+            hablar(Math.random() > 0.5 ? "Great job" : "Good work");
+            setTimeout(() => {
+                index++;
+                document.getElementById('screen-quiz').classList.add('hidden');
+                if(index < data.length) {
+                    document.getElementById('screen-flash').classList.remove('hidden');
+                    mostrarCard();
+                } else {
+                    document.getElementById('screen-over').classList.remove('hidden');
+                    document.getElementById('player-name').innerText = nombre;
+                    let lista = JSON.parse(localStorage.getItem('jugadores') || "[]");
+                    document.getElementById('leaderboard').innerHTML = lista.map(l => `• ${l}<br>`).join('');
+                }
+            }, 1000);
+        } else {
+            hablar("Almost perfect");
+        }
+    }
+</script>
+</body>
+</html>
